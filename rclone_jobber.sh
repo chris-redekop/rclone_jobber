@@ -39,8 +39,8 @@ log_file="${path%.*}.log"               #replace path extension with "log"
 #log_file="/var/log/rclone_jobber.log"  #for Logrotate
 
 # set log_option for rclone
-log_option="--log-file=$log_file"       #log to log_file
-#log_option="--syslog"                  #log to systemd journal
+# log_option="--log-file=$log_file"       #log to log_file
+log_option="--syslog"                  #log to systemd journal
 
 ################################## functions #################################
 send_to_log()
