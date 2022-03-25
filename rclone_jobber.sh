@@ -28,7 +28,8 @@ monitoring_URL="$6"    #cron monitoring service URL to send email if cron failur
 ################################ set variables ###############################
 # $new is the directory name of the current snapshot
 # $timestamp is time that old file was moved out of new (not time that file was copied from source)
-new="last_snapshot"
+new="current"
+# new="last_snapshot"
 timestamp="$(date +%F_%T)"
 #timestamp="$(date +%F_%H%M%S)"  #time w/o colons if thumb drive is FAT format, which does not allow colons in file name
 
