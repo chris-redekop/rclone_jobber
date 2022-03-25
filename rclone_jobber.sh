@@ -16,14 +16,18 @@
 ################################# parameters #################################
 source="$1"            #the directory to back up (without a trailing slash)
 dest="$2"              #the directory to back up to (without a trailing slash or "last_snapshot") destination=$dest/last_snapshot
-move_old_files_to="$3" #move_old_files_to is one of:
+move_old_files_to="${3:-dated_directory}" #move_old_files_to is one of:
                        # "dated_directory" - move old files to a dated directory (an incremental backup)
                        # "dated_files"     - move old files to old_files directory, and append move date to file names (an incremental backup)
                        # ""                - old files are overwritten or deleted (a plain one-way sync backup)
-options="$4"           #rclone options like "--filter-from=filter_patterns --checksum --log-level="INFO" --dry-run"
+options="${4:---dry-run}"           #rclone options like "--filter-from=filter_patterns --checksum --log-level="INFO" --dry-run"
                        #do not put these in options: --backup-dir, --suffix, --log-file
-job_name="$5"          #job_name="$(basename $0)"
+job_name="${5:-${dest%:}}"          #job_name="$(basename $0)"
 monitoring_URL="$6"    #cron monitoring service URL to send email if cron failure or other error prevented back up
+
+
+echo "source: $source; dest: $dest; job_name: $job_name"
+echo "move_old_files_to: $move_old_files_to; options: $options"
 
 ################################ set variables ###############################
 # $new is the directory name of the current snapshot
