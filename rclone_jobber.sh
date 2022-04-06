@@ -52,7 +52,7 @@ send_to_log()
     msg="$1"
 
     # set log - send msg to log
-    echo "$msg" >> "$log_file"                             #log msg to log_file
+    # echo "$msg" >> "$log_file"                             #log msg to log_file
     #printf "$msg" | systemd-cat -t RCLONE_JOBBER -p info   #log msg to systemd journal
 }
 
