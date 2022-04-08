@@ -42,17 +42,13 @@ path="$(realpath "$0")"                 #this will place log in the same directo
 log_file="${path%.*}.log"               #replace path extension with "log"
 #log_file="/var/log/rclone_jobber.log"  #for Logrotate
 
-# set log_option for rclone
-# log_option="--log-file=$log_file"       #log to log_file
-log_option="--syslog"                  #log to systemd journal
-
 ################################## functions #################################
 send_to_log()
 {
     msg="$1"
 
     # set log - send msg to log
-    # echo "$msg" >> "$log_file"                             #log msg to log_file
+    echo "$msg"
     #printf "$msg" | systemd-cat -t RCLONE_JOBBER -p info   #log msg to systemd journal
 }
 
@@ -112,7 +108,7 @@ elif [ "$move_old_files_to" != "" ]; then
 fi
 
 ################################### back up ##################################
-cmd="rclone sync $source $dest/$new $backup_dir $log_option $options"
+cmd="rclone sync $source $dest/$new $backup_dir $options"
 
 # progress message
 echo "Back up in progress $timestamp $job_name"
