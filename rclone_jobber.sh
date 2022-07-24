@@ -23,44 +23,26 @@ move_old_files_to="${3:-dated_directory}" #move_old_files_to is one of:
 options="${4:---dry-run}"           #rclone options like "--filter-from=filter_patterns --checksum --log-level="INFO" --dry-run"
                        #do not put these in options: --backup-dir, --suffix, --log-file
 job_name="${5:-${dest%:}}"          #job_name="$(basename $0)"
-monitoring_URL="$6"    #cron monitoring service URL to send email if cron failure or other error prevented back up
 
 
-echo "source: $source; dest: $dest; job_name: $job_name"
-echo "move_old_files_to: $move_old_files_to; options: $options"
+echo "source = '$source', dest = '$dest', move_old_files_to = '$move_old_files_to', options = '$options', job_name = '$job_name'"
 
 ################################ set variables ###############################
 # $new is the directory name of the current snapshot
 # $timestamp is time that old file was moved out of new (not time that file was copied from source)
 new="current"
-# new="last_snapshot"
 timestamp="$(date +%F_%T)"
-#timestamp="$(date +%F_%H%M%S)"  #time w/o colons if thumb drive is FAT format, which does not allow colons in file name
 
-# set log_file path
-path="$(realpath "$0")"                 #this will place log in the same directory as this script
-log_file="${path%.*}.log"               #replace path extension with "log"
-#log_file="/var/log/rclone_jobber.log"  #for Logrotate
 
 ################################## functions #################################
-send_to_log()
-{
-    msg="$1"
 
-    # set log - send msg to log
-    echo "$msg"
-    #printf "$msg" | systemd-cat -t RCLONE_JOBBER -p info   #log msg to systemd journal
-}
-
-# print message to echo, log, and popup
 print_message()
 {
     urgency="$1"
     msg="$2"
     message="${urgency}: $job_name $msg"
 
-    echo "$message"
-    send_to_log "$(date +%F_%T) $message"
+    echo "$(date +%F_%T) $message"
     warning_icon="/usr/share/icons/Adwaita/32x32/emblems/emblem-synchronizing.png"   #path in Fedora 28
     # notify-send is a popup notification on most Linux desktops, install libnotify-bin
     command -v notify-send && notify-send --urgency critical --icon "$warning_icon" "$message"
@@ -111,12 +93,8 @@ fi
 cmd="rclone sync $source $dest/$new $backup_dir $options"
 
 # progress message
-echo "Back up in progress $timestamp $job_name"
-echo "$cmd"
-
-# set logging to verbose
-#send_to_log "$timestamp $job_name"
-#send_to_log "$cmd"
+print_message "INFO" "Back up in progress $timestamp $job_name"
+print_message "INFO" "$cmd"
 
 eval $cmd
 exit_code=$?
@@ -124,15 +102,9 @@ exit_code=$?
 ############################ confirmation and logging ########################
 if [ "$exit_code" -eq 0 ]; then            #if no errors
     confirmation="$(date +%F_%T) completed $job_name"
-    echo "$confirmation"
-    send_to_log "$confirmation"
-    send_to_log ""
-    if [ ! -z "$monitoring_URL" ]; then
-        wget --quiet $monitoring_URL -O /dev/null
-    fi
+    print_message "INFO" "$confirmation"
     exit 0
 else
     print_message "ERROR" "failed.  rclone exit_code=$exit_code"
-    send_to_log ""
     exit 1
 fi
