@@ -32,7 +32,7 @@ param(
     [string] $job_name = $dest
 )
 
-Write-Host "source = '$source', dest = '$dest', options = '$options', job_name = '$job_name'"
+Write-Host "source = '$source', dest = '$dest', move_old_files_to = '$move_old_files_to', options = '$options', job_name = '$job_name'"
 
 ################################ set variables ###############################
 # $new is the directory name of the current snapshot
@@ -45,8 +45,7 @@ Write-Host "new = '$new', timestamp = '$timestamp'"
 
 ################################## functions #################################
 
-function print_message
-{
+function print_message {
     param(
         [Parameter(Mandatory = $true, Position = 0)]
         [string] $urgency,
@@ -54,9 +53,9 @@ function print_message
         [string] $msg
     )
 
-    $message="${urgency}: $job_name $msg"
+    $message = "${urgency}: $job_name $msg"
 
-    Write-Host "$message"
+    Write-Host "$(Get-Date -UFormat %F_%T) $message"
 }
 
 ################################# range checks ################################
@@ -83,23 +82,31 @@ elseif ($move_old_files_to -eq "dated_files") {
     # move deleted or changed files to old directory, and append _$timestamp to file name
     $backup_dir = "--backup-dir=$dest/old_files --suffix=_$timestamp"
 }
-elseif ($move_old_files_to -eq "") {
+elseif ($move_old_files_to -ne "") {
     print_message "WARNING" "Parameter move_old_files_to=$move_old_files_to, but should be dated_directory or dated_files.\
   Moving old data to dated_directory."
     $backup_dir = "--backup-dir=$dest/$timestamp"
 }
 
 ################################### back up ##################################
-$cmd="rclonie sync $source $dest/$new $backup_dir $options"
+$cmd = "rclone sync $source $dest/$new $backup_dir $options"
 
 # progress message
-Write-Host "Back up in progress $timestamp $job_name"
-Write-Host "$cmd"
+print_message "INFO" "Back up in progress $timestamp $job_name"
+print_message "INFO" "$cmd"
 
 ################################### back up ##################################
 Invoke-Expression $cmd
+$exit_code = $?
 
 ############################ confirmation and logging ########################
-$confirmation="$(date +%F_%T) completed $job_name"
-Write-Host "$confirmation"
-exit 0
+
+if ($exit_code -eq 0) {
+    $confirmation = "$(date +%F_%T) completed $job_name"
+    print_message "INFO" "$confirmation"
+    exit 0
+}
+else {
+    print_message "ERROR" "failed.  rclone exit_code=$exit_code"
+    exit 1
+}
