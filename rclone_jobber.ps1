@@ -32,16 +32,16 @@ param(
     [string] $job_name = $dest
 )
 
-Write-Host "source = '$source', dest = '$dest', move_old_files_to = '$move_old_files_to', options = '$options', job_name = '$job_name'"
+Write-Output "source = '$source', dest = '$dest', move_old_files_to = '$move_old_files_to', options = '$options', job_name = '$job_name'"
 
 ################################ set variables ###############################
 # $new is the directory name of the current snapshot
 # $timestamp is time that old file was moved out of new (not time that file was copied from source)
 
 $new = "current"
-$timestamp = Get-Date -UFormat %F_%T
+$timestamp = Get-Date -UFormat %Y-%m-%d_%T
 
-Write-Host "new = '$new', timestamp = '$timestamp'"
+Write-Output "new = '$new', timestamp = '$timestamp'"
 
 ################################## functions #################################
 
@@ -55,7 +55,7 @@ function print_message {
 
     $message = "${urgency}: $job_name $msg"
 
-    Write-Host "$(Get-Date -UFormat %F_%T) $message"
+    Write-Output "$(Get-Date -UFormat %Y-%m-%d_%T) $message"
 }
 
 ################################# range checks ################################
@@ -76,7 +76,7 @@ if (!$dest) {
 # default move_old_files_to="" will remove deleted or changed files from backup
 if ($move_old_files_to -eq "dated_directory") {
     # move deleted or changed files to archive/$(date +%Y)/$timestamp directory
-    $backup_dir = "--backup-dir=$dest/archive/$(date +%Y)/$timestamp"
+    $backup_dir = "--backup-dir=$dest/archive/$(Get-Date -UFormat %Y)/$timestamp"
 }
 elseif ($move_old_files_to -eq "dated_files") {
     # move deleted or changed files to old directory, and append _$timestamp to file name
@@ -96,13 +96,12 @@ print_message "INFO" "Back up in progress $timestamp $job_name"
 print_message "INFO" "$cmd"
 
 ################################### back up ##################################
-Invoke-Expression $cmd
-$exit_code = $?
+$exit_code = Invoke-Expression ("$cmd" + ';$LastExitCode')
 
 ############################ confirmation and logging ########################
 
 if ($exit_code -eq 0) {
-    $confirmation = "$(date +%F_%T) completed $job_name"
+    $confirmation = "Completed $job_name"
     print_message "INFO" "$confirmation"
     exit 0
 }
