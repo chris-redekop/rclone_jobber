@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 # rclone_jobber.sh version 1.5.6
 # Tutorial, backup-job examples, and source code at https://github.com/wolfv6/rclone_jobber
 # Logging options are headed by "# set log".  Details are in the tutorial's "Logging options" section.
@@ -13,55 +13,44 @@
 # If not, see http://creativecommons.org/publicdomain/zero/1.0/.
 # rclone_jobber is not affiliated with rclone.
 
-################################# parameters #################################
-source="$1"            #the directory to back up (without a trailing slash)
-dest="$2"              #the directory to back up to (without a trailing slash or "last_snapshot") destination=$dest/last_snapshot
-move_old_files_to="${3:-dated_directory}" #move_old_files_to is one of:
-                       # "dated_directory" - move old files to a dated directory (an incremental backup)
-                       # "dated_files"     - move old files to old_files directory, and append move date to file names (an incremental backup)
-                       # ""                - old files are overwritten or deleted (a plain one-way sync backup)
-options="${4:---dry-run}"           #rclone options like "--filter-from=filter_patterns --checksum --log-level="INFO" --dry-run"
-                       #do not put these in options: --backup-dir, --suffix, --log-file
-job_name="${5:-${dest%:}}"          #job_name="$(basename $0)"
-
+source="$1"
+dest="$2"
+options="${3:---dry-run}"
+# do not put these in options: --backup-dir, --suffix, --log-file
+job_name="${4:-${dest%:}}"
 
 echo "source = '$source', dest = '$dest', move_old_files_to = '$move_old_files_to', options = '$options', job_name = '$job_name'"
 
-################################ set variables ###############################
-# $new is the directory name of the current snapshot
-# $timestamp is time that old file was moved out of new (not time that file was copied from source)
 new="current"
 timestamp="$(date +%F_%T)"
+backup_dir="--backup-dir=$dest/archive/$(date +%Y)/$timestamp"
 
-
-################################## functions #################################
+echo "new = '$new', timestamp = '$timestamp'"
 
 print_message()
 {
     urgency="$1"
     msg="$2"
+
     message="${urgency}: $job_name $msg"
 
     echo "$(date +%F_%T) $message"
+
     warning_icon="/usr/share/icons/Adwaita/32x32/emblems/emblem-synchronizing.png"   #path in Fedora 28
     # notify-send is a popup notification on most Linux desktops, install libnotify-bin
     command -v notify-send && notify-send --urgency critical --icon "$warning_icon" "$message"
 }
 
-################################# range checks ################################
-# if source is empty string
 if [ -z "$source" ]; then
     print_message "ERROR" "aborted because source is empty string."
     exit 1
 fi
 
-# if dest is empty string
 if [ -z "$dest" ]; then
     print_message "ERROR" "aborted because dest is empty string."
     exit 1
 fi
 
-# if source is empty
 if ! test "rclone lsf --max-depth 1 $source"; then  # rclone lsf requires rclone 1.40 or later
     print_message "ERROR" "aborted because source is empty."
     exit 1
@@ -74,37 +63,19 @@ if pidof -o $PPID -x "$job_name"; then
     exit 1
 fi
 
-############################### move_old_files_to #############################
-# deleted or changed files are removed or moved, depending on value of move_old_files_to variable
-# default move_old_files_to="" will remove deleted or changed files from backup
-if [ "$move_old_files_to" = "dated_directory" ]; then
-    # move deleted or changed files to archive/$(date +%Y)/$timestamp directory
-    backup_dir="--backup-dir=$dest/archive/$(date +%Y)/$timestamp"
-elif [ "$move_old_files_to" = "dated_files" ]; then
-    # move deleted or changed files to old directory, and append _$timestamp to file name
-    backup_dir="--backup-dir=$dest/old_files --suffix=_$timestamp"
-elif [ "$move_old_files_to" != "" ]; then
-    print_message "WARNING" "Parameter move_old_files_to=$move_old_files_to, but should be dated_directory or dated_files.\
-  Moving old data to dated_directory."
-    backup_dir="--backup-dir=$dest/$timestamp"
-fi
-
-################################### back up ##################################
 cmd="rclone sync $source $dest/$new $backup_dir $options"
 
-# progress message
 print_message "INFO" "Back up in progress $timestamp $job_name"
 print_message "INFO" "$cmd"
 
 eval $cmd
 exit_code=$?
 
-############################ confirmation and logging ########################
 if [ "$exit_code" -eq 0 ]; then            #if no errors
-    confirmation="$(date +%F_%T) completed $job_name"
+    confirmation="Completed $job_name"
     print_message "INFO" "$confirmation"
     exit 0
 else
-    print_message "ERROR" "failed.  rclone exit_code=$exit_code"
+    print_message "ERROR" "Failed.  rclone exit_code=$exit_code"
     exit 1
 fi
